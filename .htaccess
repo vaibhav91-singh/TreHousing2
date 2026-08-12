@@ -1,14 +1,12 @@
 Options -MultiViews
 RewriteEngine On
 
-# Ignore /api, /admin, and /static for React SPA rewrites so Hostinger Python/Django handles them directly
-RewriteCond %{REQUEST_URI} ^/api [NC,OR]
-RewriteCond %{REQUEST_URI} ^/admin [NC,OR]
+# Allow static media/api if any
 RewriteCond %{REQUEST_URI} ^/media [NC,OR]
 RewriteCond %{REQUEST_URI} ^/static [NC]
 RewriteRule ^ - [L]
 
-# React SPA routing: redirect all other requests to index.html
+# React SPA routing: redirect all page routes (including /admin) to index.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [QSA,L]
