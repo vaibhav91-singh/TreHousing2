@@ -49,8 +49,9 @@ function App() {
     <BrowserRouter>
       <JobNotificationListener />
       <Routes>
-        <Route path="/" element={<HomePageView />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/Admin" element={<AdminPanel />} />
+        <Route path="/admin/*" element={<AdminPanel />} />
         <Route path="/syllabus" element={<SyllabusView />} />
         <Route path="/solvedpaper" element={<PYQPageView />} />
         <Route path="/solved-papers" element={<PYQPageView />} />
@@ -64,6 +65,7 @@ function App() {
         <Route path="/jobs" element={<JobVacancy />} />
         <Route path="/performance" element={<ResultDashbord />} />
         <Route path="/study-materials" element={<StudyMaterialView />} />
+        <Route path="*" element={<HomePageView />} />
       </Routes>
       
     </BrowserRouter>
