@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-
-// https://vite.dev/config/
 import { fileURLToPath, URL } from 'node:url'
+
+// Change this to your live Render/PythonAnywhere Django backend URL in production
+const BACKEND_URL = process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
 
 export default defineConfig({
   plugins: [react()],
@@ -14,11 +15,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: BACKEND_URL,
         changeOrigin: true,
       },
       '/media': {
-        target: 'http://127.0.0.1:8000',
+        target: BACKEND_URL,
         changeOrigin: true,
       }
     }
