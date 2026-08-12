@@ -16,6 +16,7 @@ import JobVacancy from './views/JobVacancy.jsx';
 import ResultDashbord from './views/ResultDashbord.jsx';
 import JobNotificationListener from './components/JobNotificationListener.jsx';
 import StudyMaterialView from './views/StudyMaterialView.jsx';
+import AdminPanel from './views/AdminPanel.jsx';
 function App() {
 
   // Initialize Lenis Smooth Scroll
@@ -49,6 +50,7 @@ function App() {
       <JobNotificationListener />
       <Routes>
         <Route path="/" element={<HomePageView />} />
+        <Route path="/admin" element={<AdminPanel />} />
         <Route path="/syllabus" element={<SyllabusView />} />
         <Route path="/solvedpaper" element={<PYQPageView />} />
         <Route path="/solved-papers" element={<PYQPageView />} />

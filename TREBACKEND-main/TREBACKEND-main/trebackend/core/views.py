@@ -285,11 +285,18 @@ def get_user_performance(request):
 # ==========================================================================
 # RECENT UPDATES
 #=====================================================================
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def recent_updates_list(request):
-    updates = RecentUpdate.objects.all()[:10]  # Only fetch latest 10 updates
-    serializer = RecentUpdateSerializer(updates, many=True)
-    return Response(serializer.data)
+    if request.method == 'GET':
+        updates = RecentUpdate.objects.all()[:10]  # Fetch latest 10 updates
+        serializer = RecentUpdateSerializer(updates, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = RecentUpdateSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ==========================================================================
 # NEW FEATURE: TOPIC-WISE MCQ SYSTEM ENDPOINT
