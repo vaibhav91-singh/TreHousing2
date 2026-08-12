@@ -255,11 +255,28 @@ def get_solved_papers(request):
         except Exception as e:
             return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     elif request.method == 'POST':
-        serializer = SolvedPaperSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
-        return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            title = request.data.get('title')
+            year = request.data.get('year', 2024)
+            paper_link = request.data.get('paper_link')
+            answer_key_link = request.data.get('answer_key_link', '')
+            
+            # Auto-assign or get default subject
+            subject = Subject.objects.first()
+            if not subject:
+                course = Course.objects.create(title="General Course", description="Auto created for papers")
+                subject = Subject.objects.create(course=course, title="General Paper Subject", description="General", pdf_link="", total_questions=100, total_marks=100)
+                
+            paper = SolvedPaper.objects.create(
+                subject=subject,
+                title=title,
+                year=year,
+                paper_link=paper_link,
+                answer_key_link=answer_key_link
+            )
+            return Response({"success": True, "data": SolvedPaperSerializer(paper).data}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"success": False, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # ==========================================================================
 #   JOB VACANCY
@@ -335,30 +352,20 @@ def topic_wise_mcq_api(request):
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     elif request.method == 'POST':
-        # Handles Exam creation, Subject creation or Topic bulk upload
-        action = request.data.get('action', 'exam')
-        if action == 'exam':
-            serializer = TopicExamSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"success": True, "data": serializer.data}, status=201)
-            return Response({"success": False, "error": serializer.errors}, status=400)
-        elif action == 'topic':
-            exam_id = request.data.get('exam_id')
-            subject_name = request.data.get('subject_name', 'General')
-            topic_name_val = request.data.get('topic_name')
-            bulk_json = request.data.get('bulk_json', '')
+        subject_name = request.data.get('subject_name', 'General')
+        topic_name_val = request.data.get('topic_name')
+        bulk_json = request.data.get('bulk_json', '')
 
-            try:
-                exam = TopicExam.objects.get(id=exam_id) if exam_id else TopicExam.objects.first()
-                if not exam:
-                    exam = TopicExam.objects.create(name="General Exam")
-                
-                subject, _ = TopicSubject.objects.get_or_create(exam=exam, name=subject_name)
-                topic = TopicName.objects.create(subject=subject, name=topic_name_val, bulk_upload_json=bulk_json)
-                return Response({"success": True, "message": "Topic and Questions Created Successfully"}, status=201)
-            except Exception as e:
-                return Response({"success": False, "error": str(e)}, status=400)
+        try:
+            exam = TopicExam.objects.first()
+            if not exam:
+                exam = TopicExam.objects.create(name="General Exam")
+            
+            subject, _ = TopicSubject.objects.get_or_create(exam=exam, name=subject_name)
+            topic = TopicName.objects.create(subject=subject, name=topic_name_val, bulk_upload_json=bulk_json)
+            return Response({"success": True, "message": "Topic and Questions Created Successfully"}, status=201)
+        except Exception as e:
+            return Response({"success": False, "error": str(e)}, status=400)
 
 # ==========================================================================
 # STUDY MATERIAL SYSTEM ENDPOINT (GET & POST)
@@ -379,24 +386,17 @@ def study_materials_api(request):
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     elif request.method == 'POST':
-        action = request.data.get('action', 'exam')
-        if action == 'exam':
-            serializer = StudyMaterialExamSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"success": True, "data": serializer.data}, status=201)
-            return Response({"success": False, "error": serializer.errors}, status=400)
-        elif action == 'document':
-            exam_name = request.data.get('exam_name', 'General Exam')
-            subject_name = request.data.get('subject_name', 'General Subject')
-            title = request.data.get('title')
-            file_link = request.data.get('file_link')
+        exam_name = request.data.get('exam_name', 'General Exam')
+        subject_name = request.data.get('subject_name', 'General Subject')
+        title = request.data.get('title')
+        file_link = request.data.get('file_link')
 
-            try:
-                exam, _ = StudyMaterialExam.objects.get_or_create(name=exam_name)
-                subject, _ = StudyMaterialSubject.objects.get_or_create(exam=exam, name=subject_name)
-                doc = StudyMaterialDocument.objects.create(subject=subject, title=title, file_link=file_link)
-                return Response({"success": True, "data": StudyMaterialDocumentSerializer(doc).data}, status=201)
-            except Exception as e:
-                return Response({"success": False, "error": str(e)}, status=400)
+        try:
+            exam, _ = StudyMaterialExam.objects.get_or_create(name=exam_name)
+            subject, _ = StudyMaterialSubject.objects.get_or_create(exam=exam, name=subject_name)
+            doc = StudyMaterialDocument.objects.create(subject=subject, title=title, file_link=file_link)
+            return Response({"success": True, "data": StudyMaterialDocumentSerializer(doc).data}, status=201)
+        except Exception as e:
+            return Response({"success": False, "error": str(e)}, status=400)
+
 

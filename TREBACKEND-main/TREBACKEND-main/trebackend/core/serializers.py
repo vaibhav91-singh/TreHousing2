@@ -85,13 +85,13 @@ class QuizSerializer(serializers.ModelSerializer):
 # NEW FEATURE: CLOUD-LINKED SOLVED PAPERS SERIALIZER
 # ==========================================================================
 class SolvedPaperSerializer(serializers.ModelSerializer):
-    # Isse string field me subject ka title (naam) direct pass ho jayega frontend tabs ke liye
     subject_title = serializers.CharField(source='subject.title', read_only=True)
     linked_mock_title = serializers.CharField(source='linked_mock.title', read_only=True)
 
     class Meta:
         model = SolvedPaper
         fields = ['id', 'subject', 'subject_title', 'title', 'year', 'paper_link', 'answer_key_link', 'linked_mock', 'linked_mock_title', 'created_at']
+        extra_kwargs = {'subject': {'required': False, 'allow_null': True}}
 
 #==============================================================
 #JOB VACANCY
@@ -120,19 +120,19 @@ class TopicNameSerializer(serializers.ModelSerializer):
     questions = TopicQuestionSerializer(many=True, read_only=True)
     class Meta:
         model = TopicName
-        fields = ['id', 'name', 'questions']
+        fields = '__all__'
 
 class TopicSubjectSerializer(serializers.ModelSerializer):
     topics = TopicNameSerializer(many=True, read_only=True)
     class Meta:
         model = TopicSubject
-        fields = ['id', 'name', 'topics']
+        fields = '__all__'
 
 class TopicExamSerializer(serializers.ModelSerializer):
     subjects = TopicSubjectSerializer(many=True, read_only=True)
     class Meta:
         model = TopicExam
-        fields = ['id', 'name', 'subjects']
+        fields = '__all__'
 
 # ==========================================================================
 # NEW FEATURE: STUDY MATERIAL SYSTEM SERIALIZERS
@@ -147,10 +147,10 @@ class StudyMaterialSubjectSerializer(serializers.ModelSerializer):
     documents = StudyMaterialDocumentSerializer(many=True, read_only=True)
     class Meta:
         model = StudyMaterialSubject
-        fields = ['id', 'name', 'documents']
+        fields = '__all__'
 
 class StudyMaterialExamSerializer(serializers.ModelSerializer):
     materials_subjects = StudyMaterialSubjectSerializer(many=True, read_only=True)
     class Meta:
         model = StudyMaterialExam
-        fields = ['id', 'name', 'materials_subjects']
+        fields = '__all__'
