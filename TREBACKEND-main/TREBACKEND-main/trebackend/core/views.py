@@ -6,11 +6,11 @@ from django.http import FileResponse, JsonResponse, Http404
 from django.conf import settings
 # For Quiz
 from .models import Quiz, Question, Choice
-from .serializers import QuizSerializer
-# For Solved Paper
-from rest_framework import status
-from .models import SolvedPaper,JobVacancy, RecentUpdate, TopicExam, StudyMaterialExam
-from .serializers import SolvedPaperSerializer,JobVacancySerializer, RecentUpdateSerializer, TopicExamSerializer, StudyMaterialExamSerializer
+from .serializers import (
+    CourseSerializer, SubjectSerializer, QuizSerializer, SolvedPaperSerializer,
+    JobVacancySerializer, RecentUpdateSerializer, TopicExamSerializer,
+    StudyMaterialExamSerializer, StudyMaterialDocumentSerializer
+)
 import os
 
 
@@ -53,6 +53,8 @@ def subjects_list_create(request):
         )
         return Response({"success": True, "data": SubjectSerializer(subject).data}, status=201)
 
+@api_view(['GET'])
+def course_api(request):
     course_id = request.GET.get('course_id')
     subject_id = request.GET.get('subject_id')
     pdf_request = request.GET.get('pdf') == "true"
