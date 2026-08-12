@@ -5,6 +5,8 @@ from django.urls import path
 
 urlpatterns = [
     path('v1/', course_api, name='course-api'),
+    path('v1/courses/', views.courses_list_create, name='courses_list_create'),
+    path('v1/subjects/', views.subjects_list_create, name='subjects_list_create'),
     path('v2/', pyq_api, name='pyq-api'),
     # INTEGRATE THIS NEW QUIZ ENDPOINT
     path('v1/quiz/', views.quiz_api, name='quiz_api_endpoint'),

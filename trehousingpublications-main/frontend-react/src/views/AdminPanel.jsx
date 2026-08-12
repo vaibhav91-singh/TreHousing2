@@ -114,6 +114,12 @@ const AdminPanel = () => {
             📊 Dashboard Overview
           </button>
           <button
+            className={`nav-item ${activeTab === 'courses' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('courses'); setMobileMenuOpen(false); }}
+          >
+            📖 Courses & Subjects
+          </button>
+          <button
             className={`nav-item ${activeTab === 'jobs' ? 'active' : ''}`}
             onClick={() => { setActiveTab('jobs'); setMobileMenuOpen(false); }}
           >
@@ -173,6 +179,7 @@ const AdminPanel = () => {
           <div className="topbar-title">
             <h2>
               {activeTab === 'dashboard' && 'Welcome to TRE Admin Dashboard'}
+              {activeTab === 'courses' && 'Courses, Subjects & Syllabus Manager'}
               {activeTab === 'jobs' && 'Job Vacancies & Career Hub Manager'}
               {activeTab === 'updates' && 'Recent Updates Notification Center'}
               {activeTab === 'study' && 'Study Materials & PDF Resources Manager'}
@@ -191,6 +198,7 @@ const AdminPanel = () => {
 
         <div className="admin-tab-body">
           {activeTab === 'dashboard' && <DashboardOverview setActiveTab={setActiveTab} />}
+          {activeTab === 'courses' && <CoursesSubjectsManager />}
           {activeTab === 'jobs' && <JobsManager />}
           {activeTab === 'updates' && <UpdatesManager />}
           {activeTab === 'study' && <StudyMaterialManager />}
@@ -283,6 +291,240 @@ const DashboardOverview = ({ setActiveTab }) => {
           <button className="action-chip" onClick={() => setActiveTab('jobs')}>➕ Post New Job</button>
           <button className="action-chip" onClick={() => setActiveTab('updates')}>📢 Post Update Notification</button>
           <button className="action-chip" onClick={() => setActiveTab('topic-mcq')}>⚡ Bulk Upload Questions</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* --- COURSES & SUBJECTS MANAGER COMPONENT --- */
+const CoursesSubjectsManager = () => {
+  const [courses, setCourses] = useState([]);
+  const [activeSubTab, setActiveSubTab] = useState('course'); // 'course' or 'subject'
+  
+  // Course Form State
+  const [courseTitle, setCourseTitle] = useState('');
+  const [courseDesc, setCourseDesc] = useState('');
+  
+  // Subject Form State
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [subjectTitle, setSubjectTitle] = useState('');
+  const [subjectDesc, setSubjectDesc] = useState('');
+  const [totalQuestions, setTotalQuestions] = useState(100);
+  const [totalMarks, setTotalMarks] = useState(100);
+
+  const fetchCourses = () => {
+    fetch(`${API_BASE}/api/v1/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCourses(data);
+          if (data.length > 0 && !selectedCourseId) {
+            setSelectedCourseId(data[0].id);
+          }
+        }
+      })
+      .catch((e) => console.error(e));
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const handleAddCourse = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/courses/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: courseTitle, description: courseDesc })
+      });
+      const data = await res.json();
+      if (res.ok || data.success) {
+        alert('Course Created Successfully!');
+        fetchCourses();
+        setCourseTitle('');
+        setCourseDesc('');
+      } else {
+        alert('Error adding course: ' + (data.error || 'Failed'));
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
+  const handleAddSubject = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/subjects/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          course: selectedCourseId,
+          title: subjectTitle,
+          description: subjectDesc,
+          total_questions: totalQuestions,
+          total_marks: totalMarks
+        })
+      });
+      const data = await res.json();
+      if (res.ok || data.success) {
+        alert('Subject Created & Linked Successfully!');
+        fetchCourses();
+        setSubjectTitle('');
+        setSubjectDesc('');
+      } else {
+        alert('Error adding subject');
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
+  return (
+    <div className="manager-grid">
+      <div className="form-card">
+        <div className="sub-tabs mb-3" style={{ display: 'flex', gap: '10px' }}>
+          <button
+            className={`btn-sm ${activeSubTab === 'course' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveSubTab('course')}
+          >
+            ➕ Add New Course
+          </button>
+          <button
+            className={`btn-sm ${activeSubTab === 'subject' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveSubTab('subject')}
+          >
+            📙 Add Subject to Course
+          </button>
+        </div>
+
+        {activeSubTab === 'course' ? (
+          <form onSubmit={handleAddCourse}>
+            <h3>📖 Add New Course</h3>
+            <div className="form-group">
+              <label>Course Title*</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                placeholder="e.g. BPSC Foundation / UPSC CSE"
+                value={courseTitle}
+                onChange={(e) => setCourseTitle(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                className="form-input"
+                rows="3"
+                placeholder="Course details..."
+                value={courseDesc}
+                onChange={(e) => setCourseDesc(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn-primary w-100">
+              🚀 Publish Course
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleAddSubject}>
+            <h3>📙 Add Subject to Course</h3>
+            <div className="form-group">
+              <label>Select Parent Course*</label>
+              <select
+                className="form-input"
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
+                required
+              >
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Subject Title*</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                placeholder="e.g. Indian History / General Studies"
+                value={subjectTitle}
+                onChange={(e) => setSubjectTitle(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                className="form-input"
+                rows="2"
+                placeholder="Subject info..."
+                value={subjectDesc}
+                onChange={(e) => setSubjectDesc(e.target.value)}
+              />
+            </div>
+            <div className="form-row">
+              <div className="form-group flex-1">
+                <label>Total Questions</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={totalQuestions}
+                  onChange={(e) => setTotalQuestions(e.target.value)}
+                />
+              </div>
+              <div className="form-group flex-1">
+                <label>Total Marks</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={totalMarks}
+                  onChange={(e) => setTotalMarks(e.target.value)}
+                />
+              </div>
+            </div>
+            <button type="submit" className="btn-primary w-100">
+              🚀 Save Subject
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className="table-card">
+        <h3>Existing Courses & Linked Subjects ({courses.length})</h3>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Course Name</th>
+                <th>Linked Subjects</th>
+              </tr>
+            </thead>
+            <tbody>
+              {courses.map((c) => (
+                <tr key={c.id}>
+                  <td><strong>{c.title}</strong></td>
+                  <td>
+                    {c.subjects && c.subjects.length > 0 ? (
+                      c.subjects.map((sub) => (
+                        <span key={sub.id} className="badge badge-govt me-1 mb-1">
+                          {sub.title}
+                        </span>
+                      ))
+                    ) : (
+                      <small className="text-muted">No subjects added yet</small>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {courses.length === 0 && (
+                <tr>
+                  <td colSpan="2" className="text-center">No courses found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

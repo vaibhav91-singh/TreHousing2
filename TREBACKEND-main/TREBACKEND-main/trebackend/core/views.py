@@ -14,8 +14,44 @@ from .serializers import SolvedPaperSerializer,JobVacancySerializer, RecentUpdat
 import os
 
 
-@api_view(['GET'])
-def course_api(request):
+@api_view(['GET', 'POST'])
+def courses_list_create(request):
+    if request.method == 'GET':
+        courses = Course.objects.all()
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        title = request.data.get('title')
+        description = request.data.get('description', '')
+        course = Course.objects.create(title=title, description=description)
+        return Response({"success": True, "data": CourseSerializer(course).data}, status=201)
+
+@api_view(['GET', 'POST'])
+def subjects_list_create(request):
+    if request.method == 'GET':
+        subjects = Subject.objects.all()
+        serializer = SubjectSerializer(subjects, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        course_id = request.data.get('course')
+        title = request.data.get('title')
+        description = request.data.get('description', '')
+        total_questions = request.data.get('total_questions', 100)
+        total_marks = request.data.get('total_marks', 100)
+        
+        course = Course.objects.get(id=course_id) if course_id else Course.objects.first()
+        if not course:
+            course = Course.objects.create(title="General Course", description="Auto created")
+            
+        subject = Subject.objects.create(
+            course=course,
+            title=title,
+            description=description,
+            pdf_link="",
+            total_questions=total_questions,
+            total_marks=total_marks
+        )
+        return Response({"success": True, "data": SubjectSerializer(subject).data}, status=201)
 
     course_id = request.GET.get('course_id')
     subject_id = request.GET.get('subject_id')
