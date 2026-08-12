@@ -204,6 +204,8 @@ const AdminPanel = () => {
   );
 };
 
+const API_BASE = 'https://trehousing2.onrender.com';
+
 /* --- DASHBOARD OVERVIEW COMPONENT --- */
 const DashboardOverview = ({ setActiveTab }) => {
   const [stats, setStats] = useState({ jobs: 0, updates: 0, mocks: 0, papers: 0 });
@@ -212,10 +214,10 @@ const DashboardOverview = ({ setActiveTab }) => {
     const fetchStats = async () => {
       try {
         const [jobsRes, updatesRes, mocksRes, papersRes] = await Promise.all([
-          fetch('/api/job/'),
-          fetch('/api/recent-updates/'),
-          fetch('/api/v1/quiz/'),
-          fetch('/api/v1/solved-papers/')
+          fetch(`${API_BASE}/api/job/`),
+          fetch(`${API_BASE}/api/recent-updates/`),
+          fetch(`${API_BASE}/api/v1/quiz/`),
+          fetch(`${API_BASE}/api/v1/solved-papers/`)
         ]);
         const jobs = jobsRes.ok ? await jobsRes.json() : [];
         const updates = updatesRes.ok ? await updatesRes.json() : [];
@@ -316,7 +318,7 @@ const JobsManager = () => {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/job/');
+      const res = await fetch(`${API_BASE}/api/job/`);
       if (res.ok) {
         const data = await res.json();
         setJobs(data);
@@ -331,7 +333,7 @@ const JobsManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = editingJob ? `/api/job/${editingJob.id}/` : '/api/job/';
+      const url = editingJob ? `${API_BASE}/api/job/${editingJob.id}/` : `${API_BASE}/api/job/`;
       const method = editingJob ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -615,7 +617,7 @@ const UpdatesManager = () => {
 
   const fetchUpdates = async () => {
     try {
-      const res = await fetch('/api/recent-updates/');
+      const res = await fetch(`${API_BASE}/api/recent-updates/`);
       if (res.ok) {
         const data = await res.json();
         setUpdates(data);
@@ -628,7 +630,7 @@ const UpdatesManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/recent-updates/', {
+      const res = await fetch(`${API_BASE}/api/recent-updates/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -730,7 +732,7 @@ const StudyMaterialManager = () => {
   const [materials, setMaterials] = useState([]);
 
   useEffect(() => {
-    fetch('/api/v1/study-materials/')
+    fetch(`${API_BASE}/api/v1/study-materials/`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.success) setMaterials(resData.data);
@@ -881,7 +883,7 @@ const TopicMcqManager = () => {
 const MockTestManager = () => {
   const [quizzes, setQuizzes] = useState([]);
   useEffect(() => {
-    fetch('/api/v1/quiz/')
+    fetch(`${API_BASE}/api/v1/quiz/`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setQuizzes(data);
@@ -927,7 +929,7 @@ const MockTestManager = () => {
 const SolvedPaperManager = () => {
   const [papers, setPapers] = useState([]);
   useEffect(() => {
-    fetch('/api/v1/solved-papers/')
+    fetch(`${API_BASE}/api/v1/solved-papers/`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.success) setPapers(resData.data);
