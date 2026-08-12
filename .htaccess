@@ -1,7 +1,21 @@
 Options -MultiViews
 RewriteEngine On
 
-# Allow static media/api if any
+# Ensure correct MIME Types for CSS, JS and Web fonts for Edge/Chrome
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js .mjs
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+  Header set Cache-Control "max-age=2592000, public"
+</IfModule>
+
+# Allow static assets directly
+RewriteCond %{REQUEST_URI} ^/assets [NC,OR]
 RewriteCond %{REQUEST_URI} ^/media [NC,OR]
 RewriteCond %{REQUEST_URI} ^/static [NC]
 RewriteRule ^ - [L]
