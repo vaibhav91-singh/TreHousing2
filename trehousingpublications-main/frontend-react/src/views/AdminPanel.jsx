@@ -730,34 +730,110 @@ const UpdatesManager = () => {
 /* --- STUDY MATERIAL MANAGER COMPONENT --- */
 const StudyMaterialManager = () => {
   const [materials, setMaterials] = useState([]);
+  const [formData, setFormData] = useState({
+    exam_name: 'UPSC',
+    subject_name: 'General Studies',
+    title: '',
+    file_link: ''
+  });
 
-  useEffect(() => {
+  const fetchMaterials = () => {
     fetch(`${API_BASE}/api/v1/study-materials/`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.success) setMaterials(resData.data);
       })
       .catch((e) => console.error(e));
+  };
+
+  useEffect(() => {
+    fetchMaterials();
   }, []);
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/study-materials/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'document', ...formData })
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        alert('Study Material PDF successfully published!');
+        fetchMaterials();
+        setFormData({ exam_name: 'UPSC', subject_name: 'General Studies', title: '', file_link: '' });
+      } else {
+        alert('Error publishing material');
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
   return (
-    <div className="manager-container">
-      <div className="info-banner-card">
-        <div className="info-icon">📚</div>
-        <div>
-          <h4>Study Material Structure</h4>
-          <p>Hierarchical Mapping: Exam Category ➔ Subject ➔ PDF Note Documents</p>
-        </div>
+    <div className="manager-grid">
+      <div className="form-card">
+        <h3>📚 Add Study Material / PDF Document</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Exam Category (e.g. UPSC, BPSC, SSC)</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. UPSC"
+              value={formData.exam_name}
+              onChange={(e) => setFormData({ ...formData, exam_name: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Subject Name</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. Modern History"
+              value={formData.subject_name}
+              onChange={(e) => setFormData({ ...formData, subject_name: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Document Title / Chapter Name*</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. Freedom Struggle Chapter 1 Notes"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>PDF Link (Google Drive / S3 / Direct Link)*</label>
+            <input
+              type="url"
+              className="form-input"
+              required
+              placeholder="https://drive.google.com/..."
+              value={formData.file_link}
+              onChange={(e) => setFormData({ ...formData, file_link: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn-primary w-100">
+            🚀 Add Study Material
+          </button>
+        </form>
       </div>
 
-      <div className="table-card mt-3">
+      <div className="table-card">
         <h3>Active Study Materials</h3>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Exam Name</th>
-                <th>Subject & Document Drive Links</th>
+                <th>Exam</th>
+                <th>Subjects & PDFs</th>
               </tr>
             </thead>
             <tbody>
@@ -798,6 +874,7 @@ const StudyMaterialManager = () => {
 
 /* --- TOPIC MCQ MANAGER COMPONENT --- */
 const TopicMcqManager = () => {
+  const [subjectName, setSubjectName] = useState('History');
   const [topicName, setTopicName] = useState('');
   const [bulkJson, setBulkJson] = useState('');
 
@@ -817,7 +894,24 @@ const TopicMcqManager = () => {
     e.preventDefault();
     try {
       JSON.parse(bulkJson);
-      alert('JSON Validated! Uploading questions to topic: ' + topicName);
+      const res = await fetch(`${API_BASE}/api/v1/topic-wise-mcq/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'topic',
+          subject_name: subjectName,
+          topic_name: topicName,
+          bulk_json: bulkJson
+        })
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        alert('Topic and Questions Uploaded Successfully!');
+        setTopicName('');
+        setBulkJson('');
+      } else {
+        alert('Error uploading questions: ' + (data.error || 'Check backend log'));
+      }
     } catch (err) {
       alert('Invalid JSON Syntax! Please check format.');
     }
@@ -828,6 +922,17 @@ const TopicMcqManager = () => {
       <div className="form-card">
         <h3>⚡ Bulk Upload MCQs via JSON</h3>
         <form onSubmit={handleBulkUpload}>
+          <div className="form-group">
+            <label>Subject Name</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. History / Geography / Polity"
+              value={subjectName}
+              onChange={(e) => setSubjectName(e.target.value)}
+              required
+            />
+          </div>
           <div className="form-group">
             <label>Topic Name</label>
             <input
@@ -882,44 +987,117 @@ const TopicMcqManager = () => {
 /* --- MOCK TEST MANAGER COMPONENT --- */
 const MockTestManager = () => {
   const [quizzes, setQuizzes] = useState([]);
-  useEffect(() => {
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'General',
+    description: ''
+  });
+
+  const fetchQuizzes = () => {
     fetch(`${API_BASE}/api/v1/quiz/`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setQuizzes(data);
       })
       .catch((e) => console.error(e));
+  };
+
+  useEffect(() => {
+    fetchQuizzes();
   }, []);
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/quiz/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        alert('Mock Test Series Created Successfully!');
+        fetchQuizzes();
+        setFormData({ title: '', category: 'General', description: '' });
+      } else {
+        alert('Failed to create mock test.');
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
   return (
-    <div className="table-card">
-      <h3>Active Test Series & Mock Tests ({quizzes.length})</h3>
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Category</th>
-              <th>Test Series Title</th>
-              <th>Total Questions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quizzes.map((q) => (
-              <tr key={q.id}>
-                <td>#{q.id}</td>
-                <td><span className="badge badge-govt">{q.category}</span></td>
-                <td><strong>{q.title}</strong></td>
-                <td>{q.questions?.length || 0} Questions</td>
-              </tr>
-            ))}
-            {quizzes.length === 0 && (
+    <div className="manager-grid">
+      <div className="form-card">
+        <h3>📝 Create New Mock Test Series</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Test Title*</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. BPSC Prelims Full Mock Test 1"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Category (e.g. UPSC, BPSC, SSC)</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. BPSC"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea
+              className="form-input"
+              rows="3"
+              placeholder="Test Series Details..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn-primary w-100">
+            🚀 Publish Mock Test
+          </button>
+        </form>
+      </div>
+
+      <div className="table-card">
+        <h3>Active Test Series ({quizzes.length})</h3>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan="4" className="text-center">No mock test series found.</td>
+                <th>ID</th>
+                <th>Category</th>
+                <th>Test Series Title</th>
+                <th>Total Questions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {quizzes.map((q) => (
+                <tr key={q.id}>
+                  <td>#{q.id}</td>
+                  <td><span className="badge badge-govt">{q.category}</span></td>
+                  <td><strong>{q.title}</strong></td>
+                  <td>{q.questions?.length || 0} Questions</td>
+                </tr>
+              ))}
+              {quizzes.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="text-center">No mock test series found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -928,54 +1106,140 @@ const MockTestManager = () => {
 /* --- SOLVED PAPER MANAGER COMPONENT --- */
 const SolvedPaperManager = () => {
   const [papers, setPapers] = useState([]);
-  useEffect(() => {
+  const [formData, setFormData] = useState({
+    title: '',
+    year: new Date().getFullYear(),
+    paper_link: '',
+    answer_key_link: '',
+    subject: 1
+  });
+
+  const fetchPapers = () => {
     fetch(`${API_BASE}/api/v1/solved-papers/`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.success) setPapers(resData.data);
       })
       .catch((e) => console.error(e));
+  };
+
+  useEffect(() => {
+    fetchPapers();
   }, []);
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/solved-papers/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        alert('Solved Paper Link Published Successfully!');
+        fetchPapers();
+        setFormData({ title: '', year: new Date().getFullYear(), paper_link: '', answer_key_link: '', subject: 1 });
+      } else {
+        alert('Failed to save paper link.');
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
   return (
-    <div className="table-card">
-      <h3>Solved Papers & Official Answer Keys ({papers.length})</h3>
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Year</th>
-              <th>Paper PDF Link</th>
-              <th>Answer Key Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {papers.map((p) => (
-              <tr key={p.id}>
-                <td><strong>{p.title}</strong></td>
-                <td>{p.year}</td>
-                <td>
-                  <a href={p.paper_link} target="_blank" rel="noreferrer" className="btn-link">
-                    Paper PDF ↗
-                  </a>
-                </td>
-                <td>
-                  {p.answer_key_link ? (
-                    <a href={p.answer_key_link} target="_blank" rel="noreferrer" className="btn-link">
-                      Answer Key ↗
-                    </a>
-                  ) : '-'}
-                </td>
-              </tr>
-            ))}
-            {papers.length === 0 && (
+    <div className="manager-grid">
+      <div className="form-card">
+        <h3>📄 Add Solved Paper & Answer Key Link</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Paper Title*</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. UPSC Prelims 2024 GS Paper 1"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Year*</label>
+            <input
+              type="number"
+              className="form-input"
+              required
+              placeholder="2024"
+              value={formData.year}
+              onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Question Paper Drive Link*</label>
+            <input
+              type="url"
+              className="form-input"
+              required
+              placeholder="https://drive.google.com/..."
+              value={formData.paper_link}
+              onChange={(e) => setFormData({ ...formData, paper_link: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Official Answer Key Link (Optional)</label>
+            <input
+              type="url"
+              className="form-input"
+              placeholder="https://drive.google.com/..."
+              value={formData.answer_key_link}
+              onChange={(e) => setFormData({ ...formData, answer_key_link: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn-primary w-100">
+            🚀 Publish Solved Paper
+          </button>
+        </form>
+      </div>
+
+      <div className="table-card">
+        <h3>Solved Papers ({papers.length})</h3>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan="4" className="text-center">No solved papers found.</td>
+                <th>Title</th>
+                <th>Year</th>
+                <th>Paper Link</th>
+                <th>Answer Key</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {papers.map((p) => (
+                <tr key={p.id}>
+                  <td><strong>{p.title}</strong></td>
+                  <td>{p.year}</td>
+                  <td>
+                    <a href={p.paper_link} target="_blank" rel="noreferrer" className="btn-link">
+                      Paper PDF ↗
+                    </a>
+                  </td>
+                  <td>
+                    {p.answer_key_link ? (
+                      <a href={p.answer_key_link} target="_blank" rel="noreferrer" className="btn-link">
+                        Answer Key ↗
+                      </a>
+                    ) : '-'}
+                  </td>
+                </tr>
+              ))}
+              {papers.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="text-center">No solved papers found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

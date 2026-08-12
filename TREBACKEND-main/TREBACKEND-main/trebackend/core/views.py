@@ -185,81 +185,88 @@ def pyq_api(request):
     return JsonResponse({"error": "Invalid query parameters"}, status=400)
 
     # ==========================================================================
-# NEW: QUIZ AND MOCK TEST API ENDPOINT
+# QUIZ AND MOCK TEST API ENDPOINT (GET & POST)
 # ==========================================================================
 import random
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def quiz_api(request):
-    quiz_id = request.GET.get('quiz_id')
-    subject_id = request.GET.get('subject_id')
-    
-    def shuffle_quiz_data(data):
-        # Agar data list hai (multiple quizzes), toh har quiz ke questions shuffle karo
-        if isinstance(data, list):
-            for quiz in data:
-                random.shuffle(quiz['questions'])
-                for q in quiz['questions']:
-                    random.shuffle(q['choices'])
-                if quiz.get('display_questions_limit'):
-                    quiz['questions'] = quiz['questions'][:quiz['display_questions_limit']]
-        # Agar single object hai
-        else:
-            random.shuffle(data['questions'])
-            for q in data['questions']:
-                random.shuffle(q['choices'])
-            if data.get('display_questions_limit'):
-                data['questions'] = data['questions'][:data['display_questions_limit']]
-        return data
-
-    if quiz_id:
-        try:
-            quiz = Quiz.objects.prefetch_related('questions__choices').get(id=quiz_id)
-            serializer = QuizSerializer(quiz)
-            # Shuffle response data before returning
-            shuffled_data = shuffle_quiz_data(serializer.data)
-            return Response(shuffled_data)
-        except Quiz.DoesNotExist:
-            return Response({"error": "Quiz not found"}, status=404)
-
-    # Subject filter ya All quizzes ke liye
-    if subject_id:
-        quizzes = Quiz.objects.filter(subject_id=subject_id).prefetch_related('questions__choices')
-    else:
-        quizzes = Quiz.objects.prefetch_related('questions__choices').all()
-    
-    serializer = QuizSerializer(quizzes, many=True)
-    shuffled_data = shuffle_quiz_data(serializer.data)
-    return Response(shuffled_data)
-    # ==========================================================================
-# NEW: Solved Papers API ENDPOINT
-# ==========================================================================
-
-@api_view(['GET'])
-def get_solved_papers(request):
-    """Sare solved papers fetch karne ke liye API endpoint"""
-    try:
-        papers = SolvedPaper.objects.all().order_by('-created_at')
-        
+    if request.method == 'GET':
+        quiz_id = request.GET.get('quiz_id')
         subject_id = request.GET.get('subject_id')
+        
+        def shuffle_quiz_data(data):
+            if isinstance(data, list):
+                for quiz in data:
+                    random.shuffle(quiz['questions'])
+                    for q in quiz['questions']:
+                        random.shuffle(q['choices'])
+                    if quiz.get('display_questions_limit'):
+                        quiz['questions'] = quiz['questions'][:quiz['display_questions_limit']]
+            else:
+                random.shuffle(data['questions'])
+                for q in data['questions']:
+                    random.shuffle(q['choices'])
+                if data.get('display_questions_limit'):
+                    data['questions'] = data['questions'][:data['display_questions_limit']]
+            return data
+
+        if quiz_id:
+            try:
+                quiz = Quiz.objects.prefetch_related('questions__choices').get(id=quiz_id)
+                serializer = QuizSerializer(quiz)
+                shuffled_data = shuffle_quiz_data(serializer.data)
+                return Response(shuffled_data)
+            except Quiz.DoesNotExist:
+                return Response({"error": "Quiz not found"}, status=404)
+
         if subject_id:
-            papers = papers.filter(subject_id=subject_id)
-            
-        serializer = SolvedPaperSerializer(papers, many=True)
-        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            quizzes = Quiz.objects.filter(subject_id=subject_id).prefetch_related('questions__choices')
+        else:
+            quizzes = Quiz.objects.prefetch_related('questions__choices').all()
+        
+        serializer = QuizSerializer(quizzes, many=True)
+        shuffled_data = shuffle_quiz_data(serializer.data)
+        return Response(shuffled_data)
+
+    elif request.method == 'POST':
+        serializer = QuizSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ==========================================================================
+# Solved Papers API ENDPOINT (GET & POST)
+# ==========================================================================
+@api_view(['GET', 'POST'])
+def get_solved_papers(request):
+    if request.method == 'GET':
+        try:
+            papers = SolvedPaper.objects.all().order_by('-created_at')
+            subject_id = request.GET.get('subject_id')
+            if subject_id:
+                papers = papers.filter(subject_id=subject_id)
+                
+            serializer = SolvedPaperSerializer(papers, many=True)
+            return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    elif request.method == 'POST':
+        serializer = SolvedPaperSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 # ==========================================================================
 #   JOB VACANCY
 #=====================================================================
-
 @api_view(['GET', 'POST'])
 def job_list_create(request):
     if request.method == 'GET':
-        # Sirf active jobs dikhane ke liye filter
         jobs = JobVacancy.objects.filter(status=True) 
         serializer = JobVacancySerializer(jobs, many=True)
         return Response(serializer.data)
@@ -270,11 +277,22 @@ def job_list_create(request):
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
-@api_view(['GET'])
+
+@api_view(['GET', 'PUT', 'DELETE'])
 def job_detail_api(request, pk):
     job = get_object_or_404(JobVacancy, pk=pk)
-    serializer = JobVacancySerializer(job)
-    return Response(serializer.data)
+    if request.method == 'GET':
+        serializer = JobVacancySerializer(job)
+        return Response(serializer.data)
+    elif request.method == 'PUT':
+        serializer = JobVacancySerializer(job, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+    elif request.method == 'DELETE':
+        job.delete()
+        return Response({"success": True}, status=204)
 
 @api_view(['GET'])
 def get_user_performance(request):
@@ -288,7 +306,7 @@ def get_user_performance(request):
 @api_view(['GET', 'POST'])
 def recent_updates_list(request):
     if request.method == 'GET':
-        updates = RecentUpdate.objects.all()[:10]  # Fetch latest 10 updates
+        updates = RecentUpdate.objects.all()[:10]
         serializer = RecentUpdateSerializer(updates, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
@@ -299,45 +317,86 @@ def recent_updates_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ==========================================================================
-# NEW FEATURE: TOPIC-WISE MCQ SYSTEM ENDPOINT
+# TOPIC-WISE MCQ SYSTEM ENDPOINT (GET & POST)
 # ==========================================================================
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def topic_wise_mcq_api(request):
-    """
-    Returns a nested hierarchy of Topic-wise MCQs:
-    Exam -> Subject -> Topic -> Questions
-    """
-    try:
-        exams = TopicExam.objects.all().prefetch_related('subjects__topics__questions')
-        serializer = TopicExamSerializer(exams, many=True)
-        return Response({
-            "success": True,
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({
-            "success": False,
-            "error": str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if request.method == 'GET':
+        try:
+            exams = TopicExam.objects.all().prefetch_related('subjects__topics__questions')
+            serializer = TopicExamSerializer(exams, many=True)
+            return Response({
+                "success": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    elif request.method == 'POST':
+        # Handles Exam creation, Subject creation or Topic bulk upload
+        action = request.data.get('action', 'exam')
+        if action == 'exam':
+            serializer = TopicExamSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"success": True, "data": serializer.data}, status=201)
+            return Response({"success": False, "error": serializer.errors}, status=400)
+        elif action == 'topic':
+            exam_id = request.data.get('exam_id')
+            subject_name = request.data.get('subject_name', 'General')
+            topic_name_val = request.data.get('topic_name')
+            bulk_json = request.data.get('bulk_json', '')
+
+            try:
+                exam = TopicExam.objects.get(id=exam_id) if exam_id else TopicExam.objects.first()
+                if not exam:
+                    exam = TopicExam.objects.create(name="General Exam")
+                
+                subject, _ = TopicSubject.objects.get_or_create(exam=exam, name=subject_name)
+                topic = TopicName.objects.create(subject=subject, name=topic_name_val, bulk_upload_json=bulk_json)
+                return Response({"success": True, "message": "Topic and Questions Created Successfully"}, status=201)
+            except Exception as e:
+                return Response({"success": False, "error": str(e)}, status=400)
 
 # ==========================================================================
-# NEW FEATURE: STUDY MATERIAL SYSTEM ENDPOINT
+# STUDY MATERIAL SYSTEM ENDPOINT (GET & POST)
 # ==========================================================================
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def study_materials_api(request):
-    """
-    Returns a nested hierarchy of Study Materials:
-    Exam -> Subject -> Documents
-    """
-    try:
-        exams = StudyMaterialExam.objects.all().prefetch_related('materials_subjects__documents')
-        serializer = StudyMaterialExamSerializer(exams, many=True)
-        return Response({
-            "success": True,
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({
-            "success": False,
-            "error": str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if request.method == 'GET':
+        try:
+            exams = StudyMaterialExam.objects.all().prefetch_related('materials_subjects__documents')
+            serializer = StudyMaterialExamSerializer(exams, many=True)
+            return Response({
+                "success": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    elif request.method == 'POST':
+        action = request.data.get('action', 'exam')
+        if action == 'exam':
+            serializer = StudyMaterialExamSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"success": True, "data": serializer.data}, status=201)
+            return Response({"success": False, "error": serializer.errors}, status=400)
+        elif action == 'document':
+            exam_name = request.data.get('exam_name', 'General Exam')
+            subject_name = request.data.get('subject_name', 'General Subject')
+            title = request.data.get('title')
+            file_link = request.data.get('file_link')
+
+            try:
+                exam, _ = StudyMaterialExam.objects.get_or_create(name=exam_name)
+                subject, _ = StudyMaterialSubject.objects.get_or_create(exam=exam, name=subject_name)
+                doc = StudyMaterialDocument.objects.create(subject=subject, title=title, file_link=file_link)
+                return Response({"success": True, "data": StudyMaterialDocumentSerializer(doc).data}, status=201)
+            except Exception as e:
+                return Response({"success": False, "error": str(e)}, status=400)
+
